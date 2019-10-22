@@ -7,7 +7,7 @@ Xingang Pan, Xiaohang Zhan, Jianping Shi, Xiaoou Tang, Ping Luo. ["Switchable Wh
 ### Introduction
 
 * Switchable Whitening unifies various whitening and standardization techniques in a general form, and adaptively learns their importance ratios for different tasks.
-* This repo is for ImageNet classification, we would release Syncronized SW for detection and segmentation later.
+* This repo is for ImageNet classification. We also provide the code for Syncronized SW at `models/ops/sync_switchwhiten.py`, which could be used for detection and segmentation.
 
 ### Requirements
 
@@ -55,7 +55,7 @@ Top1/Top5 error on the ImageNet validation set are reported.
 
 ### TODO
 1. Pretrained models and code of DenseNet would be released in November.
-2. We would release Syncronized SW for detection and segmentation later.
+2. We would release implementation of Syncronized SW in detection and segmentation later.
 
 ### Citing SW
 ```  
