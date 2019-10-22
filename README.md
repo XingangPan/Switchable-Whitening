@@ -1,4 +1,4 @@
-## Switchable Whitening
+## Switchable Whitening (SW)
 
 ### Paper
 
@@ -23,12 +23,12 @@ Xingang Pan, Xiaohang Zhan, Jianping Shi, Xiaoou Tang, Ping Luo. ["Switchable Wh
 
 Top1/Top5 error on the ImageNet validation set are reported.
 
-| Model                     | BN    | SW (BW+IW)  |
-| -------------------       | ------------------ | ------------------ |
-| ResNet-50                |  23.58/7.00  |  22.07/6.04  |
-| ResNet-101             | 22.48/6.23   | 20.87/5.54    |
-| DenseNet-121          | 24.96/7.85    | 23.56/6.85    |
-| DenseNet-169          | 24.02/7.06    | 22.48/6.29    |
+| Model                 | BN | SN | BW | SW (BW+IW) |
+| -------------------   | ------------------ | ------------------ | ------------------ | ------------------ |
+| ResNet-50             | 23.58/7.00  | 23.10/6.55  | 23.31/6.72  | 22.07/6.04  |
+| ResNet-101            | 22.48/6.23  | 22.01/5.91  | 22.10/5.98  | 20.87/5.54  |
+| DenseNet-121          | 24.96/7.85  | 24.38/7.26  | 24.56/7.55  | 23.56/6.85  |
+| DenseNet-169          | 24.02/7.06  | 23.16/6.55  | 23.24/6.65  | 22.48/6.29  |
 
 ### Before Start
 1. Clone the repository  
@@ -36,10 +36,10 @@ Top1/Top5 error on the ImageNet validation set are reported.
     git clone https://github.com/XingangPan/Switchable-Whitening.git
     ```
 
-2. Download [ImageNet](http://image-net.org/download-images) dataset (if you need to test or train on ImageNet). You may follow the instruction at [fb.resnet.torch](https://github.com/facebook/fb.resnet.torch) to process the validation set.
+2. Download [ImageNet](http://image-net.org/download-images) dataset. You may follow the instruction at [fb.resnet.torch](https://github.com/facebook/fb.resnet.torch) to process the validation set.
 
 ### Training
-1. Train with dataparallel
+1. Train with nn.DataParallel
     ```Shell
     sh experiments/resnet50_sw/run.sh  # remember to modify --data to your ImageNet path
     ```

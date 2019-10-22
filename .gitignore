@@ -1,0 +1,10 @@
+*.swp
+*.pyc
+__pycache__
+*.tar
+*.tar.gz
+*.pth
+checkpoints
+images*
+logs*
+event*
