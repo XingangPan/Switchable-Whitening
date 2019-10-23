@@ -50,7 +50,7 @@ Top1/Top5 error on the ImageNet validation set are reported.
 
 ### Practical concerns
 
-* Inspired by [IterativeNorm](https://arxiv.org/abs/1904.03441), SW is accelaratived via Newton's iteration.
+* Inspired by [IterativeNorm](https://arxiv.org/abs/1904.03441), SW is accelarated via Newton's iteration.
 * For SW, 4x64 (GPU number x batchsize) performs slightly better than 8x32.
 
 ### TODO
