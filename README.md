@@ -59,10 +59,11 @@ Top1/Top5 error on the ImageNet validation set are reported.
 
 ### Citing SW
 ```  
-@inproceedings{pan2018SW,  
-  author = {Xingang Pan, Xiaohang Zhan, Jianping Shi, Xiaoou Tang, Ping Luo},  
-  title = {Switchable Whitening for Deep Representation Learning},  
-  booktitle = {ICCV},  
-  year = {2019}  
+@inproceedings{pan2018switchable,
+  author = {Pan, Xingang and Zhan, Xiaohang and Shi, Jianping and Tang, Xiaoou and Luo, Ping},
+  title = {Switchable Whitening for Deep Representation Learning},
+  booktitle = {The IEEE International Conference on Computer Vision (ICCV)},
+  month = {October},
+  year = {2019}
 }
 ```  
