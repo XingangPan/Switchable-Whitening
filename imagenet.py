@@ -240,7 +240,7 @@ def main():
                 'prec1': prec1,
                 'prec5': prec5,
                 'optimizer': optimizer.state_dict(),
-            }, is_best1, is_best5, args.save_path)
+            }, is_best1, is_best5, args.save_path + '/model')
 
 
 def train(train_loader, model, criterion, optimizer, lr_scheduler, epoch):

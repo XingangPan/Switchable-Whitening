@@ -6,11 +6,11 @@ import torch
 
 
 def save_checkpoint(state, is_best1, is_best5, filename):
-    torch.save(state, filename + '.pth.tar')
+    torch.save(state, filename + '.pth')
     if is_best1:
-        shutil.copyfile(filename + '.pth.tar', filename + '_best1.pth.tar')
+        shutil.copyfile(filename + '.pth', filename + '_best1.pth')
     if is_best5:
-        shutil.copyfile(filename + '.pth.tar', filename + '_best5.pth.tar')
+        shutil.copyfile(filename + '.pth', filename + '_best5.pth')
 
 
 def load_state(load_path, model, optimizer=None):
