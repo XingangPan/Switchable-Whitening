@@ -10,10 +10,9 @@ class SwitchWhiten2d(Module):
     Args:
         num_features (int): Number of channels.
         num_pergroup (int): Number of channels for each whitening group.
-        sw_type (int): Switchable whitening type, from {2, 3, 4, 5}.
+        sw_type (int): Switchable whitening type, from {2, 3, 5}.
             sw_type = 2: BW + IW
             sw_type = 3: BW + IW + LN
-            sw_type = 4: BW + LN
             sw_type = 5: BW + IW + BN + IN + LN
         T (int): Number of iterations for iterative whitening.
         tie_weight (bool): Use the same importance weight for mean and
@@ -30,8 +29,8 @@ class SwitchWhiten2d(Module):
                  momentum=0.99,
                  affine=True):
         super(SwitchWhiten2d, self).__init__()
-        if sw_type not in [2, 3, 4, 5]:
-            raise ValueError('sw_type should be in [2, 3, 4, 5], '
+        if sw_type not in [2, 3, 5]:
+            raise ValueError('sw_type should be in [2, 3, 5], '
                              'but got {}'.format(sw_type))
         assert num_features % num_pergroup == 0
         self.num_features = num_features
@@ -43,10 +42,7 @@ class SwitchWhiten2d(Module):
         self.eps = eps
         self.momentum = momentum
         self.affine = affine
-        if sw_type == 4:
-            num_components = 2
-        else:
-            num_components = sw_type
+        num_components = sw_type
 
         self.sw_mean_weight = Parameter(torch.ones(num_components))
         if not self.tie_weight:
@@ -90,14 +86,14 @@ class SwitchWhiten2d(Module):
         # calculate batch mean and covariance
         N, C, H, W = x.size()
         in_data_t = x.transpose(0, 1).contiguous()
-        in_data_t = in_data_t.view(self.num_groups, self.num_pergroup,
-                                   -1)  # gxcx(NxHxW)
+        # g x c x (N x H x W)
+        in_data_t = in_data_t.view(self.num_groups, self.num_pergroup, -1)
 
         if self.training:
-            # gxcx1
+            # g x c x 1
             mean_bn = in_data_t.mean(-1, keepdim=True)
             in_data_bn = in_data_t - mean_bn
-            # gxcxc
+            # g x c x c
             cov_bn = torch.bmm(in_data_bn,
                                in_data_bn.transpose(1, 2)).div(H * W * N)
 
@@ -120,7 +116,7 @@ class SwitchWhiten2d(Module):
         cov_bn = cov_bn.view(N * self.num_groups, self.num_pergroup,
                              self.num_pergroup)
 
-        # (N x g) x c x (h x w)
+        # (N x g) x c x (H x W)
         in_data = x.view(N * self.num_groups, self.num_pergroup, -1)
 
         eye = in_data.data.new().resize_(self.num_pergroup, self.num_pergroup)
@@ -130,13 +126,12 @@ class SwitchWhiten2d(Module):
                          self.num_pergroup)
 
         # calculate other statistics
-        if self.sw_type in [2, 3, 5]:
-            # (N x g) x c x 1
-            mean_in = in_data.mean(-1, keepdim=True)
-            x_in = in_data - mean_in
-            # (N x g) x c x c
-            cov_in = torch.bmm(x_in, torch.transpose(x_in, 1, 2)).div(H * W)
-        if self.sw_type in [3, 4, 5]:
+        # (N x g) x c x 1
+        mean_in = in_data.mean(-1, keepdim=True)
+        x_in = in_data - mean_in
+        # (N x g) x c x c
+        cov_in = torch.bmm(x_in, torch.transpose(x_in, 1, 2)).div(H * W)
+        if self.sw_type in [3, 5]:
             x = x.view(N, -1)
             mean_ln = x.mean(-1, keepdim=True).view(N, 1, 1, 1)
             mean_ln = mean_ln.expand(N, self.num_groups, 1, 1).contiguous()
@@ -157,21 +152,19 @@ class SwitchWhiten2d(Module):
         else:
             var_weight = mean_weight
 
-        if self.sw_type == 2:  # BW + IW
-            # (N x g) x c x 1
+        # BW + IW
+        if self.sw_type == 2:
             mean = mean_weight[0] * mean_bn + mean_weight[1] * mean_in
             cov = var_weight[0] * cov_bn + var_weight[1] * cov_in + \
                 self.eps * eye
-        elif self.sw_type == 3:  # BW + IW + LN
+        # BW + IW + LN
+        elif self.sw_type == 3:
             mean = mean_weight[0] * mean_bn + \
                 mean_weight[1] * mean_in + mean_weight[2] * mean_ln
             cov = var_weight[0] * cov_bn + var_weight[1] * cov_in + \
                 var_weight[2] * var_ln + self.eps * eye
-        elif self.sw_type == 4:  # BW + LN
-            mean = mean_weight[0] * mean_bn + mean_weight[1] * mean_ln
-            cov = var_weight[0] * cov_bn + var_weight[1] * var_ln + \
-                self.eps * eye
-        elif self.sw_type == 5:  # BW + IW + BN + IN + LN
+        # BW + IW + BN + IN + LN
+        elif self.sw_type == 5:
             mean = (mean_weight[0] + mean_weight[2]) * mean_bn + \
                 (mean_weight[1] + mean_weight[3]) * mean_in + \
                 mean_weight[4] * mean_ln

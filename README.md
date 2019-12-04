@@ -21,7 +21,7 @@ Xingang Pan, Xiaohang Zhan, Jianping Shi, Xiaoou Tang, Ping Luo. ["Switchable Wh
 
 ### Results
 
-Top1/Top5 error on the ImageNet validation set are reported. The pretrained ResNet-50 with SW is available at [link](https://drive.google.com/open?id=1c1Z0ubLkdVmlj2Fb-FAzKrUg1m5RA3Jl).
+Top1/Top5 error on the ImageNet validation set are reported. The pretrained models with SW are available at [link](https://drive.google.com/open?id=1dUK0hJ_FYXP45LDJnAW_vjNGRoAP4Byb).
 
 | Model                 | BN | SN | BW | SW (BW+IW) |
 | -------------------   | ------------------ | ------------------ | ------------------ | ------------------ |
@@ -54,8 +54,7 @@ Top1/Top5 error on the ImageNet validation set are reported. The pretrained ResN
 * For SW, 4x64 (GPU number x batchsize) performs slightly better than 8x32.
 
 ### TODO
-1. More pretrained models and code of DenseNet would be released around 30th November.
-2. We would release implementation of Syncronized SW in detection and segmentation later.
+1. We would release implementation of Syncronized SW in instance segmentation later.
 
 ### Citing SW
 ```  
