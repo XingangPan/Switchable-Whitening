@@ -83,12 +83,14 @@ class SwitchWhiten2d(Module):
                     name=self.__class__.__name__, **self.__dict__))
 
     def forward(self, x):
-        # calculate batch mean and covariance
         N, C, H, W = x.size()
+        c, g = self.num_pergroup, self.num_groups
+
         in_data_t = x.transpose(0, 1).contiguous()
         # g x c x (N x H x W)
-        in_data_t = in_data_t.view(self.num_groups, self.num_pergroup, -1)
+        in_data_t = in_data_t.view(g, c, -1)
 
+        # calculate batch mean and covariance
         if self.training:
             # g x c x 1
             mean_bn = in_data_t.mean(-1, keepdim=True)
@@ -105,25 +107,16 @@ class SwitchWhiten2d(Module):
             mean_bn = torch.autograd.Variable(self.running_mean)
             cov_bn = torch.autograd.Variable(self.running_cov)
 
-        mean_bn = mean_bn.view(1, self.num_groups, self.num_pergroup, 1)
-        mean_bn = mean_bn.expand(N, self.num_groups, self.num_pergroup,
-                                 1).contiguous()
-        mean_bn = mean_bn.view(N * self.num_groups, self.num_pergroup, 1)
-        cov_bn = cov_bn.view(1, self.num_groups, self.num_pergroup,
-                             self.num_pergroup)
-        cov_bn = cov_bn.expand(N, self.num_groups, self.num_pergroup,
-                               self.num_pergroup).contiguous()
-        cov_bn = cov_bn.view(N * self.num_groups, self.num_pergroup,
-                             self.num_pergroup)
+        mean_bn = mean_bn.view(1, g, c, 1).expand(N, g, c, 1).contiguous()
+        mean_bn = mean_bn.view(N * g, c, 1)
+        cov_bn = cov_bn.view(1, g, c, c).expand(N, g, c, c).contiguous()
+        cov_bn = cov_bn.view(N * g, c, c)
 
         # (N x g) x c x (H x W)
-        in_data = x.view(N * self.num_groups, self.num_pergroup, -1)
+        in_data = x.view(N * g, c, -1)
 
-        eye = in_data.data.new().resize_(self.num_pergroup, self.num_pergroup)
-        eye = torch.nn.init.eye_(eye).view(1, self.num_pergroup,
-                                           self.num_pergroup)
-        eye = eye.expand(N * self.num_groups, self.num_pergroup,
-                         self.num_pergroup)
+        eye = in_data.data.new().resize_(c, c)
+        eye = torch.nn.init.eye_(eye).view(1, c, c).expand(N * g, c, c)
 
         # calculate other statistics
         # (N x g) x c x 1
@@ -134,11 +127,9 @@ class SwitchWhiten2d(Module):
         if self.sw_type in [3, 5]:
             x = x.view(N, -1)
             mean_ln = x.mean(-1, keepdim=True).view(N, 1, 1, 1)
-            mean_ln = mean_ln.expand(N, self.num_groups, 1, 1).contiguous()
-            mean_ln = mean_ln.view(N * self.num_groups, 1, 1)
+            mean_ln = mean_ln.expand(N, g, 1, 1).contiguous().view(N * g, 1, 1)
             var_ln = x.var(-1, keepdim=True).view(N, 1, 1, 1)
-            var_ln = var_ln.expand(N, self.num_groups, 1, 1).contiguous()
-            var_ln = var_ln.view(N * self.num_groups, 1, 1)
+            var_ln = var_ln.expand(N, g, 1, 1).contiguous().view(N * g, 1, 1)
             var_ln = var_ln * eye
         if self.sw_type == 5:
             var_bn = torch.diag_embed(torch.diagonal(cov_bn, dim1=-2, dim2=-1))
@@ -154,6 +145,7 @@ class SwitchWhiten2d(Module):
 
         # BW + IW
         if self.sw_type == 2:
+            # (N x g) x c x 1
             mean = mean_weight[0] * mean_bn + mean_weight[1] * mean_in
             cov = var_weight[0] * cov_bn + var_weight[1] * cov_in + \
                 self.eps * eye

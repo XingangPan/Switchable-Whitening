@@ -1,9 +1,9 @@
 import torch
-import torch.nn as nn
 import torch.distributed as dist
+import torch.nn as nn
 from torch.autograd import Function
-from torch.nn.parameter import Parameter
 from torch.nn.modules.module import Module
+from torch.nn.parameter import Parameter
 
 
 class SyncMeanCov(Function):
@@ -17,8 +17,7 @@ class SyncMeanCov(Function):
         ctx.training = training
 
         if training:
-            # g x c x 1
-            mean_bn = in_data.mean(-1, keepdim=True)
+            mean_bn = in_data.mean(-1, keepdim=True)  # g x c x 1
             dist.all_reduce(mean_bn)
             mean_bn /= dist.get_world_size()
             in_data_bn = in_data - mean_bn
@@ -49,9 +48,8 @@ class SyncMeanCov(Function):
             world_size = 1
 
         grad_cov_out = (grad_cov_out + grad_cov_out.transpose(1, 2)) / 2
-        # g x c x (N x H x W)
         grad_cov_in = 2 * torch.bmm(grad_cov_out, (in_data - mean_bn)) \
-            / (ctx.NHW*world_size)
+            / (ctx.NHW*world_size)   # g x c x (N x H x W)
 
         grad_mean_in = grad_mean_out / ctx.NHW / world_size
         inDiff = grad_mean_in + grad_cov_in
@@ -64,7 +62,7 @@ class SyncSwitchWhiten2d(Module):
     Args:
         num_features (int): Number of channels.
         num_pergroup (int): Number of channels for each whitening group.
-        sw_type (int): Switchable whitening type, from {2, 3, 5}.
+        sw_type (int): Switchable whitening type, from {2, 3, 4, 5}.
             sw_type = 2: BW + IW
             sw_type = 3: BW + IW + LN
             sw_type = 5: BW + IW + BN + IN + LN
@@ -83,8 +81,8 @@ class SyncSwitchWhiten2d(Module):
                  momentum=0.99,
                  affine=True):
         super(SyncSwitchWhiten2d, self).__init__()
-        if sw_type not in [2, 3, 5]:
-            raise ValueError('sw_type should be in [2, 3, 5], '
+        if sw_type not in [2, 3, 4, 5]:
+            raise ValueError('sw_type should be in [2, 3, 4, 5], '
                              'but got {}'.format(sw_type))
         assert num_features % num_pergroup == 0
         self.num_features = num_features
@@ -138,35 +136,27 @@ class SyncSwitchWhiten2d(Module):
                     name=self.__class__.__name__, **self.__dict__))
 
     def forward(self, x):
-        # calculate batch mean and covariance
         N, C, H, W = x.size()
+        c, g = self.num_pergroup, self.num_groups
+
         in_data_t = x.transpose(0, 1).contiguous()
         # g x c x (N x H x W)
-        in_data_t = in_data_t.view(self.num_groups, self.num_pergroup, -1)
-
+        in_data_t = in_data_t.view(g, c, -1)
+        # calculate batch mean and covariance
         mean_bn, cov_bn = SyncMeanCov.apply(in_data_t, self.running_mean,
                                             self.running_cov, self.momentum,
                                             self.training)
 
-        mean_bn = mean_bn.view(1, self.num_groups, self.num_pergroup, 1)
-        mean_bn = mean_bn.expand(N, self.num_groups, self.num_pergroup,
-                                 1).contiguous()
-        mean_bn = mean_bn.view(N * self.num_groups, self.num_pergroup, 1)
-        cov_bn = cov_bn.view(1, self.num_groups, self.num_pergroup,
-                             self.num_pergroup)
-        cov_bn = cov_bn.expand(N, self.num_groups, self.num_pergroup,
-                               self.num_pergroup).contiguous()
-        cov_bn = cov_bn.view(N * self.num_groups, self.num_pergroup,
-                             self.num_pergroup)
+        mean_bn = mean_bn.view(1, g, c, 1).expand(N, g, c, 1).contiguous()
+        mean_bn = mean_bn.view(N * g, c, 1)
+        cov_bn = cov_bn.view(1, g, c, c).expand(N, g, c, c).contiguous()
+        cov_bn = cov_bn.view(N * g, c, c)
 
         # (N x g) x c x (H x W)
-        in_data = x.view(N * self.num_groups, self.num_pergroup, -1)
+        in_data = x.view(N * g, c, -1)
 
-        eye = in_data.data.new().resize_(self.num_pergroup, self.num_pergroup)
-        eye = torch.nn.init.eye_(eye).view(1, self.num_pergroup,
-                                           self.num_pergroup)
-        eye = eye.expand(N * self.num_groups, self.num_pergroup,
-                         self.num_pergroup)
+        eye = in_data.data.new().resize_(c, c)
+        eye = torch.nn.init.eye_(eye).view(1, c, c).expand(N * g, c, c)
 
         # calculate other statistics
         # (N x g) x c x 1
@@ -177,11 +167,9 @@ class SyncSwitchWhiten2d(Module):
         if self.sw_type in [3, 5]:
             x = x.view(N, -1)
             mean_ln = x.mean(-1, keepdim=True).view(N, 1, 1, 1)
-            mean_ln = mean_ln.expand(N, self.num_groups, 1, 1).contiguous()
-            mean_ln = mean_ln.view(N * self.num_groups, 1, 1)
+            mean_ln = mean_ln.expand(N, g, 1, 1).contiguous().view(N * g, 1, 1)
             var_ln = x.var(-1, keepdim=True).view(N, 1, 1, 1)
-            var_ln = var_ln.expand(N, self.num_groups, 1, 1).contiguous()
-            var_ln = var_ln.view(N * self.num_groups, 1, 1)
+            var_ln = var_ln.expand(N, g, 1, 1).contiguous().view(N * g, 1, 1)
             var_ln = var_ln * eye
         if self.sw_type == 5:
             var_bn = torch.diag_embed(torch.diagonal(cov_bn, dim1=-2, dim2=-1))
@@ -197,6 +185,7 @@ class SyncSwitchWhiten2d(Module):
 
         # BW + IW
         if self.sw_type == 2:
+            # (N x g) x c x 1
             mean = mean_weight[0] * mean_bn + mean_weight[1] * mean_in
             cov = var_weight[0] * cov_bn + var_weight[1] * cov_in + \
                 self.eps * eye
