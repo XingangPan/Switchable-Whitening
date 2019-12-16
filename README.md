@@ -21,7 +21,7 @@ Xingang Pan, Xiaohang Zhan, Jianping Shi, Xiaoou Tang, Ping Luo. ["Switchable Wh
 
 ### Results
 
-Top1/Top5 error on the ImageNet validation set are reported. The pretrained models with SW are available at [link](https://drive.google.com/open?id=1dUK0hJ_FYXP45LDJnAW_vjNGRoAP4Byb).
+Top1/Top5 error on the ImageNet validation set are reported. The pretrained models with SW are available at [google drive](https://drive.google.com/open?id=1dUK0hJ_FYXP45LDJnAW_vjNGRoAP4Byb) or [BaiduYun](https://pan.baidu.com/s/1uyP4lwUZBBWd6jJRe_03mA)(password: xkdi).
 
 | Model                 | BN | SN | BW | SW (BW+IW) |
 | -------------------   | ------------------ | ------------------ | ------------------ | ------------------ |
