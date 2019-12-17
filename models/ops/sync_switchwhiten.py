@@ -156,7 +156,7 @@ class SyncSwitchWhiten2d(Module):
         in_data = x.view(N * g, c, -1)
 
         eye = in_data.data.new().resize_(c, c)
-        eye = torch.nn.init.eye_(eye).view(1, c, c).expand(N * g, c, c)
+        eye = torch.nn.init.eye_(eye).view(1, c, c).repeat(N * g, 1, 1)
 
         # calculate other statistics
         # (N x g) x c x 1
